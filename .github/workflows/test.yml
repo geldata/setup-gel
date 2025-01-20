@@ -13,90 +13,94 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - run: |
           npm install
       - run: |
           npm run all
   test: # make sure the action works on a clean machine without building
-    name: Test CLI and server installation (CLI ${{ matrix.cli-version }} / server ${{ matrix.server-version }} / OS ${{ matrix.os }})
+    name:
+      Test CLI and server installation (CLI ${{ matrix.cli-version }} / server
+      ${{ matrix.server-version }} / OS ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
         cli-version: [stable, nightly]
-        server-version: [stable, nightly, 3.0-rc.1]
+        server-version: [stable, nightly, '6.0']
       fail-fast: false
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: ./
         with:
           cli-version: ${{ matrix.cli-version }}
           server-version: ${{ matrix.server-version }}
       - name: Verify installation
         run: |
-          edgedb --version
-          edgedb-server --version
+          gel --version
+          gel-server --version
   testproject:
-    name: Test integration with EdgeDB projects (CLI ${{ matrix.cli-version }} / server ${{ matrix.server-version }} / OS ${{ matrix.os }})
+    name:
+      Test integration with Gel projects (CLI ${{ matrix.cli-version }} / server
+      ${{ matrix.server-version }} / OS ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
         cli-version: [stable, nightly]
-        server-version: [stable, nightly, 3.0-rc.1]
+        server-version: [stable, nightly, '6.0']
       fail-fast: false
     steps:
-      - uses: actions/checkout@v2
-      - name: Create edgedb.toml
+      - uses: actions/checkout@v4
+      - name: Create gel.toml
         run: |
-          echo -e '[edgedb]\nserver-version = "3.0-rc.1"' >> edgedb.toml
+          echo -e '[instance]\nserver-version = "6.0"' >> gel.toml
       - uses: ./
         with:
           cli-version: ${{ matrix.cli-version }}
           server-version: ${{ matrix.server-version }}
       - name: Verify installation
         run: |
-          edgedb query "SELECT 'Hello from GitHub Actions'"
+          gel query "SELECT 'Hello from GitHub Actions'"
   testprojectlink:
-    name: Test integration with EdgeDB projects using remote instances (CLI ${{ matrix.cli-version }})
+    name:
+      Test integration with Gel projects using remote instances (CLI ${{
+      matrix.cli-version }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
         cli-version: [stable, nightly]
       fail-fast: false
     services:
-      edgedb:
-        image: edgedb/edgedb:3
+      gel:
+        image: geldata/gel:6
         env:
-          EDGEDB_SERVER_SECURITY: insecure_dev_mode
+          GEL_SERVER_SECURITY: insecure_dev_mode
         ports:
           - 5656:5656
     steps:
-      - uses: actions/checkout@v2
-      - name: Create edgedb.toml
+      - uses: actions/checkout@v4
+      - name: Create gel.toml
         run: |
-          echo -e '[edgedb]\nserver-version = "3.0-rc.1"' >> edgedb.toml
+          echo -e '[instance]\nserver-version = "6.0"' >> gel.toml
       - uses: ./
         with:
-          server-dsn: edgedb://localhost:5656
+          server-dsn: gel://localhost:5656
           cli-version: ${{ matrix.cli-version }}
           server-version: none
       - name: Verify installation
         run: |
-          edgedb query "SELECT 'Hello from GitHub Actions'"
+          gel query "SELECT 'Hello from GitHub Actions'"
   testwin:
     runs-on: windows-latest
     steps:
       - uses: Vampire/setup-wsl@v1
         with:
-          additional-packages:
-            ca-certificates
-            curl
-      - uses: actions/checkout@v2
+          additional-packages: ca-certificates curl
+      - uses: actions/checkout@v4
       - uses: ./
       - name: Verify installation
         shell: wsl-bash {0}
         run: |
-          edgedb --version
-          edgedb-server --version
+          gel --version
+          gel-server --version

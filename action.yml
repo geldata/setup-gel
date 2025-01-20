@@ -1,42 +1,40 @@
-name: 'setup-edgedb'
-description: 'Set up EdgeDB CLI and Server and make them available in PATH'
-author: 'EdgeDB Inc.'
+name: 'setup-gel'
+description: 'Set up Gel CLI and Server and make them available in PATH'
+author: 'Gel Data Inc.'
 inputs:
   cli-version:
     required: false
     description: >
-      Version range or exact version of EdgeDB CLI to set up,
-      using SemVer's version range syntax, or one of the predefined
-      rolling version specifiers: "nightly" for the latest nightly
-      build, "stable" for the latest stable release. Defaults to
-      "stable".
+      Version range or exact version of Gel CLI to set up, using SemVer's
+      version range syntax, or one of the predefined rolling version specifiers:
+      "nightly" for the latest nightly build, "stable" for the latest stable
+      release. Defaults to "stable".
     default: 'stable'
   server-version:
     required: false
     description: >
-      Version of EdgeDB server to install, or "stable" for the latest
-      stable release, or "nightly" for the latest nightly build,
-      or "none" to skip installation. Defaults to "stable".
+      Version of Gel server to install, or "stable" for the latest stable
+      release, or "nightly" for the latest nightly build, or "none" to skip
+      installation. Defaults to "stable".
     default: 'stable'
   instance-name:
     required: false
     description: >
-      Name of EdgeDB instance to be used when creating new instance,
-      linking or initializing the project. If not set, the name will be
-      auto-generated.
+      Name of Gel instance to be used when creating new instance, linking or
+      initializing the project. If not set, the name will be auto-generated.
     default: ''
   server-dsn:
     required: false
     description: >
-      If set, specifies the DSN of a remote EdgeDB instance to link to instead
-      of initializing a new local instance.  By default, a new instance will be
+      If set, specifies the DSN of a remote Gel instance to link to instead of
+      initializing a new local instance.  By default, a new instance will be
       initialized.
     default: 'false'
   project-dir:
     required: false
     description: >
-      If set, specifies the directory with edgedb.toml project manifest.
+      If set, specifies the directory with gel.toml project manifest.
     default: ''
 runs:
   using: 'node20'
-  main: 'dist/index.cjs'
+  main: 'dist/index.js'

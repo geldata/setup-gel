@@ -16,7 +16,7 @@ import * as path from 'path'
 import * as process from 'process'
 import url from 'url'
 import type * as mainType from '../src/main'
-import {SpiedModule, spyOnModule} from './spy-on-module'
+import { SpiedModule, spyOnModule } from './spy-on-module'
 
 const tempDir = path.join(
   path.dirname(url.fileURLToPath(import.meta.url)),
@@ -26,7 +26,7 @@ const tempDir = path.join(
 process.env.RUNNER_TOOL_CACHE = path.join(tempDir, 'tools')
 process.env.RUNNER_TEMP = path.join(tempDir, 'temp')
 
-describe('setup-edgedb', () => {
+describe('setup-gel', () => {
   let inputs: Record<string, string | boolean> = {}
   let core: SpiedModule<typeof coreType>
   let exec: SpiedModule<typeof execType>
@@ -42,21 +42,20 @@ describe('setup-edgedb', () => {
   })
 
   beforeEach(async () => {
-    // eslint-disable-next-line no-console
     console.log('::stop-commands::stoptoken')
     process.env['GITHUB_PATH'] = ''
     inputs = {
       'server-dsn': false
     }
 
-    core.getInput.mockImplementation(name => String(inputs[name] || ''))
-    core.getBooleanInput.mockImplementation(name => Boolean(inputs[name]))
+    core.getInput.mockImplementation((name) => String(inputs[name] || ''))
+    core.getBooleanInput.mockImplementation((name) => Boolean(inputs[name]))
 
-    core.info.mockImplementation(line => {
+    core.info.mockImplementation((line) => {
       // uncomment to debug
       process.stderr.write(`log:${line}\n`)
     })
-    core.debug.mockImplementation(msg => {
+    core.debug.mockImplementation((msg) => {
       // uncomment to see debug output
       process.stderr.write(`${msg}\n`)
     })
@@ -68,18 +67,18 @@ describe('setup-edgedb', () => {
   })
 
   it('Installs CLI', async () => {
-    inputs['cli-version'] = '>=3.2.0 <=3.4.0'
+    inputs['cli-version'] = '>=7.0.0 <=7.0.3'
 
     let libc = ''
     if (os.platform() === 'linux') {
       libc = 'musl'
     }
     const baseDist = main.getBaseDist(os.arch(), os.platform(), libc)
-    const pkgBase = `https://packages.edgedb.com/archive/${baseDist}`
-    const expectedVer = '3.4.0\\+([0-9a-f]{7})'
-    const expectedUrl = `${pkgBase}/edgedb-cli-${expectedVer}`
+    const pkgBase = `https://packages.geldata.com/archive/${baseDist}`
+    const expectedVer = '7.0.3\\+([0-9a-f]{7})'
+    const expectedUrl = `${pkgBase}/gel-cli-${expectedVer}`
 
-    const tmpdir = fs.mkdtempSync('edgedb-setup')
+    const tmpdir = fs.mkdtempSync('gel-setup')
     let tmp = path.join(tmpdir, 'foo')
     fs.closeSync(fs.openSync(tmp, 'w'))
     tmp = fs.realpathSync(tmp)
@@ -88,7 +87,7 @@ describe('setup-edgedb', () => {
 
     tc.find.mockImplementation(() => '')
 
-    const cliPath = path.normalize('/cache/edgedb/3.4.0')
+    const cliPath = path.normalize('/cache/gel/7.0.3')
     tc.cacheFile.mockImplementation(async () => cliPath)
 
     await main.run()
@@ -100,7 +99,7 @@ describe('setup-edgedb', () => {
     expect(core.info).toHaveBeenCalledWith(
       expect.stringMatching(
         new RegExp(
-          `Downloading edgedb-cli ${expectedVer} - ${os.arch()} from ${expectedUrl}`
+          `Downloading gel-cli ${expectedVer} - ${os.arch()} from ${expectedUrl}`
         )
       )
     )
@@ -108,7 +107,7 @@ describe('setup-edgedb', () => {
   })
 
   it('Installs server', async () => {
-    inputs['cli-version'] = '>=3.2.0 <=3.4.0'
+    inputs['cli-version'] = '>=7.0.0 <=7.0.3'
     inputs['server-version'] = 'stable'
 
     let libc = ''
@@ -116,11 +115,11 @@ describe('setup-edgedb', () => {
       libc = 'musl'
     }
     const baseDist = main.getBaseDist(os.arch(), os.platform(), libc)
-    const pkgBase = `https://packages.edgedb.com/archive/${baseDist}`
-    const expectedVer = '3.4.0\\+([0-9a-f]{7})'
-    const expectedUrl = `${pkgBase}/edgedb-cli-${expectedVer}`
+    const pkgBase = `https://packages.geldata.com/archive/${baseDist}`
+    const expectedVer = '7.0.3\\+([0-9a-f]{7})'
+    const expectedUrl = `${pkgBase}/gel-cli-${expectedVer}`
 
-    const tmpdir = fs.mkdtempSync('edgedb-setup')
+    const tmpdir = fs.mkdtempSync('gel-setup')
     let tmp = path.join(tmpdir, 'foo')
     fs.closeSync(fs.openSync(tmp, 'w'))
     tmp = fs.realpathSync(tmp)
@@ -147,7 +146,7 @@ describe('setup-edgedb', () => {
       }
     })
 
-    const cliPath = path.normalize('/cache/edgedb/3.4.0')
+    const cliPath = path.normalize('/cache/gel/7.0.3')
     tc.cacheFile.mockImplementation(async () => cliPath)
     const serverPath = path.dirname(tmp)
 
@@ -160,7 +159,7 @@ describe('setup-edgedb', () => {
     expect(core.info).toHaveBeenCalledWith(
       expect.stringMatching(
         new RegExp(
-          `Downloading edgedb-cli ${expectedVer} - ${os.arch()} from ${expectedUrl}`
+          `Downloading gel-cli ${expectedVer} - ${os.arch()} from ${expectedUrl}`
         )
       )
     )
