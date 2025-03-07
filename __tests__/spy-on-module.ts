@@ -1,5 +1,5 @@
-import {jest} from '@jest/globals'
-import {FunctionLike} from 'jest-mock'
+import { jest } from '@jest/globals'
+import { FunctionLike } from 'jest-mock'
 
 export type SpiedModule<T extends object> = {
   [K in keyof T]: T[K] extends FunctionLike
@@ -14,7 +14,7 @@ export const spyOnModule = async <T extends object>(
   const props = Object.getOwnPropertyNames(actual)
   jest.unstable_mockModule(moduleName, () =>
     Object.fromEntries(
-      props.map(key => {
+      props.map((key) => {
         let value = actual[key]
         if (typeof value === 'function') {
           value = jest.fn(value)

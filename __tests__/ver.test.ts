@@ -1,7 +1,7 @@
 import * as main from '../src/main'
-import {expect, describe, it} from '@jest/globals'
+import { expect, describe, it } from '@jest/globals'
 
-describe('setup-edgedb', () => {
+describe('setup-gel', () => {
   it('Sorts versions correctly', async () => {
     const versionMap = new Map([
       ['1.0.0-beta.2+d20210806.g803b254e6', 'foo'],

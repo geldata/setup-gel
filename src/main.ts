@@ -1,6 +1,6 @@
 import * as core from '@actions/core'
 import * as exec from '@actions/exec'
-import {ExecOptions} from '@actions/exec/lib/interfaces'
+import { ExecOptions } from '@actions/exec/lib/interfaces'
 import * as io from '@actions/io'
 import * as cp from 'child_process'
 import * as tc from '@actions/tool-cache'
@@ -10,8 +10,8 @@ import * as os from 'os'
 import * as path from 'path'
 import * as semver from 'semver'
 
-export const EDGEDB_PKG_ROOT = 'https://packages.edgedb.com'
-const EDGEDB_PKG_IDX = `${EDGEDB_PKG_ROOT}/archive/.jsonindexes`
+export const PKG_ROOT = 'https://packages.geldata.com'
+const PKG_IDX = `${PKG_ROOT}/archive/.jsonindexes`
 
 export async function run(): Promise<void> {
   const cliVersion = core.getInput('cli-version')
@@ -81,7 +81,7 @@ async function installServer(
   }
 
   const cmdline = []
-  const cli = path.join(cliPath, 'edgedb')
+  const cli = path.join(cliPath, 'gel')
 
   if (requestedVersion === 'nightly') {
     cmdline.push('--nightly')
@@ -144,20 +144,19 @@ async function installCLI(requestedCliVersion: string): Promise<string> {
     includeCliPrereleases
   )
 
-  let cliDirectory = tc.find('edgedb-cli', matchingVer, arch)
+  let cliDirectory = tc.find('gel-cli', matchingVer, arch)
   if (!cliDirectory) {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const cliPkg = versionMap.get(matchingVer)!
-    const downloadUrl = new URL(cliPkg.installref, EDGEDB_PKG_ROOT).href
+    const downloadUrl = new URL(cliPkg.installref, PKG_ROOT).href
     core.info(
-      `Downloading edgedb-cli ${matchingVer} - ${arch} from ${downloadUrl}`
+      `Downloading gel-cli ${matchingVer} - ${arch} from ${downloadUrl}`
     )
     const downloadPath = await tc.downloadTool(downloadUrl)
     fs.chmodSync(downloadPath, 0o755)
     cliDirectory = await tc.cacheFile(
       downloadPath,
-      'edgedb',
-      'edgedb-cli',
+      'gel',
+      'gel-cli',
       matchingVer,
       arch
     )
@@ -171,7 +170,7 @@ export async function getMatchingVer(
   cliVersionRange: string,
   includeCliPrereleases: boolean
 ): Promise<string> {
-  const versions = Array.from(versionMap.keys()).filter(ver =>
+  const versions = Array.from(versionMap.keys()).filter((ver) =>
     semver.satisfies(ver, cliVersionRange, {
       includePrerelease: includeCliPrereleases
     })
@@ -181,7 +180,7 @@ export async function getMatchingVer(
     return versions[versions.length - 1]
   } else {
     throw Error(
-      'no published EdgeDB CLI version matches requested version ' +
+      'no published Gel CLI version matches requested version ' +
         `'${cliVersionRange}'`
     )
   }
@@ -197,12 +196,12 @@ interface Package {
 export async function getVersionMap(
   dist: string
 ): Promise<Map<string, Package>> {
-  const indexRequest = await fetch(`${EDGEDB_PKG_IDX}/${dist}.json`)
-  const index = (await indexRequest.json()) as {packages: Package[]}
+  const indexRequest = await fetch(`${PKG_IDX}/${dist}.json`)
+  const index = (await indexRequest.json()) as { packages: Package[] }
   const versionMap = new Map()
 
   for (const pkg of index.packages) {
-    if (pkg.name !== 'edgedb-cli') {
+    if (pkg.name !== 'gel-cli') {
       continue
     }
 
@@ -250,7 +249,7 @@ async function linkInstance(
 ): Promise<void> {
   instanceName = instanceName || generateInstanceName()
 
-  const cli = 'edgedb'
+  const cli = 'gel'
   const options: ExecOptions = {
     silent: true,
     listeners: {
@@ -302,7 +301,7 @@ async function initProject(
 ): Promise<void> {
   instanceName = instanceName || generateInstanceName()
 
-  const cli = 'edgedb'
+  const cli = 'gel'
   const options: ExecOptions = {
     silent: true,
     env: {
@@ -342,7 +341,7 @@ async function createNamedInstance(
   serverVersion: string,
   runstateDir: string
 ): Promise<void> {
-  const cli = 'edgedb'
+  const cli = 'gel'
 
   const options: ExecOptions = {
     silent: true,
@@ -377,7 +376,7 @@ async function startInstance(
   instanceName: string,
   runstateDir: string
 ): Promise<void> {
-  const cli = 'edgedb'
+  const cli = 'gel'
 
   const options: ExecOptions = {
     env: {
@@ -396,8 +395,8 @@ function hasProjectFile(projectDir: string | null): boolean {
   const foundPath = fs.existsSync(manifestPath)
     ? manifestPath
     : fs.existsSync(legacyManifestPath)
-    ? legacyManifestPath
-    : null
+      ? legacyManifestPath
+      : null
 
   if (!foundPath) {
     return false
@@ -406,7 +405,7 @@ function hasProjectFile(projectDir: string | null): boolean {
   try {
     fs.accessSync(foundPath)
     return true
-  } catch (error) {
+  } catch {
     return false
   }
 }
@@ -419,7 +418,7 @@ function generateInstanceName(): string {
 }
 
 function generateRunstateDir(): string {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'edgedb-server-'))
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'gel-server-'))
 }
 
 async function backgroundExec(

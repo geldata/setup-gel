@@ -1,4 +1,4 @@
-import * as main from './main'
+import * as main from './main.js'
 import * as core from '@actions/core'
 import * as exec from '@actions/exec'
 import * as os from 'os'
@@ -54,22 +54,20 @@ async function installCLI(): Promise<void> {
     cliVersionRange,
     includeCliPrereleases
   )
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  const cliPkg = versionMap.get(matchingVer)!
-  const downloadUrl = new URL(cliPkg.installref, main.EDGEDB_PKG_ROOT).href
 
-  core.info(
-    `Downloading edgedb-cli ${matchingVer} - ${arch} from ${downloadUrl}`
-  )
+  const cliPkg = versionMap.get(matchingVer)!
+  const downloadUrl = new URL(cliPkg.installref, main.PKG_ROOT).href
+
+  core.info(`Downloading gel-cli ${matchingVer} - ${arch} from ${downloadUrl}`)
 
   await checkOutput('wsl', [
     'curl',
     '--fail',
     '--output',
-    '/usr/bin/edgedb',
+    '/usr/bin/gel',
     downloadUrl
   ])
-  await checkOutput('wsl chmod +x /usr/bin/edgedb')
+  await checkOutput('wsl chmod +x /usr/bin/gel')
 }
 
 async function installServer(): Promise<void> {
@@ -84,7 +82,7 @@ async function installServer(): Promise<void> {
     args.push(requestedVersion)
   }
 
-  await checkOutput('wsl', ['edgedb', 'server', 'install'].concat(args))
+  await checkOutput('wsl', ['gel', 'server', 'install'].concat(args))
 
   if (args.length === 0) {
     args.push('--latest')
@@ -92,22 +90,22 @@ async function installServer(): Promise<void> {
   const bin = (
     await checkOutput(
       'wsl',
-      ['edgedb', 'server', 'info', '--bin-path'].concat(args)
+      ['gel', 'server', 'info', '--bin-path'].concat(args)
     )
   ).trim()
 
   if (bin === '') {
-    throw Error('could not find edgedb-server bin')
+    throw Error('could not find gel-server bin')
   }
 
   const instDir = path.dirname(path.dirname(bin))
 
-  await checkOutput('wsl', ['cp', '-a', instDir, '/opt/edgedb'])
+  await checkOutput('wsl', ['cp', '-a', instDir, '/opt/gel'])
 
   await checkOutput('wsl', [
     'ln',
     '-s',
-    '/opt/edgedb/bin/edgedb-server',
-    '/usr/bin/edgedb-server'
+    '/opt/gel/bin/gel-server',
+    '/usr/bin/gel-server'
   ])
 }
