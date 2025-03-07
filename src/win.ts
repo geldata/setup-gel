@@ -68,6 +68,8 @@ async function installCLI(): Promise<void> {
     downloadUrl
   ])
   await checkOutput('wsl chmod +x /usr/bin/gel')
+  // Compatibility
+  await checkOutput('wsl ln -s gel /usr/bin/edgedb')
 }
 
 async function installServer(): Promise<void> {
@@ -99,13 +101,23 @@ async function installServer(): Promise<void> {
   }
 
   const instDir = path.dirname(path.dirname(bin))
+  const binName = path.basename(bin)
 
   await checkOutput('wsl', ['cp', '-a', instDir, '/opt/gel'])
 
   await checkOutput('wsl', [
     'ln',
     '-s',
-    '/opt/gel/bin/gel-server',
-    '/usr/bin/gel-server'
+    '/opt/gel/bin/' + binName,
+    '/usr/bin/' + binName
   ])
+
+  if (binName != 'gel-server') {
+    await checkOutput('wsl', [
+      'ln',
+      '-s',
+      '/opt/gel/bin/' + binName,
+      '/usr/bin/gel-server'
+    ])
+  }
 }

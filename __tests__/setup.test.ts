@@ -78,9 +78,9 @@ describe('setup-gel', () => {
     const expectedVer = '7.0.3\\+([0-9a-f]{7})'
     const expectedUrl = `${pkgBase}/gel-cli-${expectedVer}`
 
-    const tmpdir = fs.mkdtempSync('gel-setup')
+    const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'gel-setup-'))
     let tmp = path.join(tmpdir, 'foo')
-    fs.closeSync(fs.openSync(tmp, 'w'))
+    fs.writeFileSync(tmp, '', { flag: 'w' })
     tmp = fs.realpathSync(tmp)
 
     tc.downloadTool.mockImplementation(async () => tmp)
@@ -89,11 +89,9 @@ describe('setup-gel', () => {
 
     const cliPath = path.normalize('/cache/gel/7.0.3')
     tc.cacheFile.mockImplementation(async () => cliPath)
+    tc.cacheDir.mockImplementation(async () => cliPath)
 
     await main.run()
-
-    fs.unlinkSync(tmp)
-    fs.rmdirSync(tmpdir)
 
     expect(tc.downloadTool).toHaveBeenCalled()
     expect(core.info).toHaveBeenCalledWith(
@@ -104,6 +102,8 @@ describe('setup-gel', () => {
       )
     )
     expect(core.addPath).toHaveBeenCalledWith(cliPath)
+
+    fs.rmdirSync(tmpdir, { recursive: true })
   })
 
   it('Installs server', async () => {
@@ -119,9 +119,9 @@ describe('setup-gel', () => {
     const expectedVer = '7.0.3\\+([0-9a-f]{7})'
     const expectedUrl = `${pkgBase}/gel-cli-${expectedVer}`
 
-    const tmpdir = fs.mkdtempSync('gel-setup')
+    const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'gel-setup-'))
     let tmp = path.join(tmpdir, 'foo')
-    fs.closeSync(fs.openSync(tmp, 'w'))
+    fs.writeFileSync(tmp, '', { flag: 'w' })
     tmp = fs.realpathSync(tmp)
 
     tc.downloadTool.mockImplementation(async () => tmp)
@@ -148,12 +148,12 @@ describe('setup-gel', () => {
 
     const cliPath = path.normalize('/cache/gel/7.0.3')
     tc.cacheFile.mockImplementation(async () => cliPath)
+    tc.cacheDir.mockImplementation(async () => cliPath)
     const serverPath = path.dirname(tmp)
 
     await main.run()
 
-    fs.unlinkSync(tmp)
-    fs.rmdirSync(tmpdir)
+    fs.rmdirSync(tmpdir, { recursive: true })
 
     expect(tc.downloadTool).toHaveBeenCalled()
     expect(core.info).toHaveBeenCalledWith(

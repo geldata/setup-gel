@@ -39745,6 +39745,7 @@ async function run$1() {
         }
     }
     catch (error) {
+        console.log(error);
         coreExports.setFailed(error.message);
     }
 }
@@ -39816,9 +39817,14 @@ async function installCLI$1(requestedCliVersion) {
         const cliPkg = versionMap.get(matchingVer);
         const downloadUrl = new URL(cliPkg.installref, PKG_ROOT).href;
         coreExports.info(`Downloading gel-cli ${matchingVer} - ${arch} from ${downloadUrl}`);
-        const downloadPath = await toolCacheExports.downloadTool(downloadUrl);
-        fs.chmodSync(downloadPath, 0o755);
-        cliDirectory = await toolCacheExports.cacheFile(downloadPath, 'gel', 'gel-cli', matchingVer, arch);
+        const cliBinary = await toolCacheExports.downloadTool(downloadUrl);
+        const downloadPath = path.dirname(cliBinary);
+        const cliName = path.basename(cliBinary);
+        fs.chmodSync(cliBinary, 0o755);
+        fs.symlinkSync(cliName, path.join(downloadPath, 'gel'));
+        // Backwards compatibility.
+        fs.symlinkSync(cliName, path.join(downloadPath, 'edgedb'));
+        cliDirectory = await toolCacheExports.cacheDir(downloadPath, 'gel-cli', matchingVer, arch);
     }
     return cliDirectory;
 }
@@ -39840,7 +39846,7 @@ async function getVersionMap(dist) {
     const index = (await indexRequest.json());
     const versionMap = new Map();
     for (const pkg of index.packages) {
-        if (pkg.name !== 'gel-cli') {
+        if (pkg.name !== 'gel-cli' && pkg.name !== 'edgedb-cli') {
             continue;
         }
         if (!versionMap.has(pkg.version) ||
@@ -40079,6 +40085,8 @@ async function installCLI() {
         downloadUrl
     ]);
     await checkOutput('wsl chmod +x /usr/bin/gel');
+    // Compatibility
+    await checkOutput('wsl ln -s gel /usr/bin/edgedb');
 }
 async function installServer() {
     const requestedVersion = coreExports.getInput('server-version');
@@ -40099,13 +40107,22 @@ async function installServer() {
         throw Error('could not find gel-server bin');
     }
     const instDir = path.dirname(path.dirname(bin));
+    const binName = path.basename(bin);
     await checkOutput('wsl', ['cp', '-a', instDir, '/opt/gel']);
     await checkOutput('wsl', [
         'ln',
         '-s',
-        '/opt/gel/bin/gel-server',
-        '/usr/bin/gel-server'
+        '/opt/gel/bin/' + binName,
+        '/usr/bin/' + binName
     ]);
+    if (binName != 'gel-server') {
+        await checkOutput('wsl', [
+            'ln',
+            '-s',
+            '/opt/gel/bin/' + binName,
+            '/usr/bin/gel-server'
+        ]);
+    }
 }
 
 if (os.platform() === 'win32') {
