@@ -94,7 +94,7 @@ jobs:
   testwin:
     runs-on: windows-latest
     steps:
-      - uses: Vampire/setup-wsl@v1
+      - uses: Vampire/setup-wsl@f40fb59d850112c9a292b0218bca8271305b9127 # v5.0
         with:
           additional-packages: ca-certificates curl
       - uses: actions/checkout@v4
