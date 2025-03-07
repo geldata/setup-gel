@@ -391,10 +391,20 @@ async function startInstance(
 }
 
 function hasProjectFile(projectDir: string | null): boolean {
-  const manifestPath = path.join(projectDir || '', 'edgedb.toml')
+  const legacyManifestPath = path.join(projectDir || '', 'edgedb.toml')
+  const manifestPath = path.join(projectDir || '', 'gel.toml')
+  const foundPath = fs.existsSync(manifestPath)
+    ? manifestPath
+    : fs.existsSync(legacyManifestPath)
+    ? legacyManifestPath
+    : null
+
+  if (!foundPath) {
+    return false
+  }
 
   try {
-    fs.accessSync(manifestPath)
+    fs.accessSync(foundPath)
     return true
   } catch (error) {
     return false
