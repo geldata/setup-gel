@@ -27,7 +27,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
         cli-version: [stable, nightly]
-        server-version: [stable, nightly, '6.0']
+        server-version: [stable, nightly, '5.0']
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
@@ -36,9 +36,34 @@ jobs:
           cli-version: ${{ matrix.cli-version }}
           server-version: ${{ matrix.server-version }}
       - name: Verify installation
+        env:
+          SERVER_VERSION: ${{ matrix.server-version }}
         run: |
           gel --version
-          gel-server --version
+          edgedb --version
+          if [ "$SERVER_VERSION" = "5.0" ]; then
+            edgedb-server --version
+          else
+            gel-server --version
+            edgedb-server --version
+          fi
+
+  testoldcli:
+    name: Test compat CLI installation
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        cli-version: ['5.0']
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        with:
+          cli-version: ${{ matrix.cli-version }}
+      - name: Verify installation
+        run: |
+          edgedb --version
+
   testproject:
     name:
       Test integration with Gel projects (CLI ${{ matrix.cli-version }} / server
@@ -62,6 +87,7 @@ jobs:
       - name: Verify installation
         run: |
           gel query "SELECT 'Hello from GitHub Actions'"
+
   testprojectlink:
     name:
       Test integration with Gel projects using remote instances (CLI ${{
@@ -91,16 +117,53 @@ jobs:
       - name: Verify installation
         run: |
           gel query "SELECT 'Hello from GitHub Actions'"
+
   testwin:
     runs-on: windows-latest
+    strategy:
+      matrix:
+        cli-version: [stable, nightly]
+        server-version: [stable, nightly, '5.0']
+      fail-fast: false
+    steps:
+      - uses: Vampire/setup-wsl@f40fb59d850112c9a292b0218bca8271305b9127 # v5.0
+        with:
+          additional-packages: ca-certificates curl
+          wsl-shell-command: >
+            bash -c "env SERVER_VERSION=${{ matrix.server-version }} bash
+            --noprofile --norc -euo pipefail '{0}'"
+      - uses: actions/checkout@v4
+      - uses: ./
+        with:
+          cli-version: ${{ matrix.cli-version }}
+          server-version: ${{ matrix.server-version }}
+      - name: Verify installation
+        shell: wsl-bash {0}
+        run: |
+          gel --version
+          edgedb --version
+          if [ "$SERVER_VERSION" = "5.0" ]; then
+            edgedb-server --version
+          else
+            gel-server --version
+            edgedb-server --version
+          fi
+
+  testwin-oldcli:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        cli-version: ['5.0']
+      fail-fast: false
     steps:
       - uses: Vampire/setup-wsl@f40fb59d850112c9a292b0218bca8271305b9127 # v5.0
         with:
           additional-packages: ca-certificates curl
       - uses: actions/checkout@v4
       - uses: ./
+        with:
+          cli-version: ${{ matrix.cli-version }}
       - name: Verify installation
         shell: wsl-bash {0}
         run: |
-          gel --version
-          gel-server --version
+          edgedb --version

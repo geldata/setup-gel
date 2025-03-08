@@ -60,6 +60,7 @@ export async function run(): Promise<void> {
       core.addPath(cliPath)
     }
   } catch (error) {
+    console.log(error)
     core.setFailed((error as Error).message)
   }
 }
@@ -151,15 +152,16 @@ async function installCLI(requestedCliVersion: string): Promise<string> {
     core.info(
       `Downloading gel-cli ${matchingVer} - ${arch} from ${downloadUrl}`
     )
-    const downloadPath = await tc.downloadTool(downloadUrl)
-    fs.chmodSync(downloadPath, 0o755)
-    cliDirectory = await tc.cacheFile(
-      downloadPath,
-      'gel',
-      'gel-cli',
-      matchingVer,
-      arch
-    )
+    const cliBinary = await tc.downloadTool(downloadUrl)
+    const downloadPath = path.dirname(cliBinary)
+    const cliName = path.basename(cliBinary)
+    fs.chmodSync(cliBinary, 0o755)
+
+    fs.symlinkSync(cliName, path.join(downloadPath, 'gel'))
+    // Backwards compatibility.
+    fs.symlinkSync(cliName, path.join(downloadPath, 'edgedb'))
+
+    cliDirectory = await tc.cacheDir(downloadPath, 'gel-cli', matchingVer, arch)
   }
 
   return cliDirectory
@@ -201,7 +203,7 @@ export async function getVersionMap(
   const versionMap = new Map()
 
   for (const pkg of index.packages) {
-    if (pkg.name !== 'gel-cli') {
+    if (pkg.name !== 'gel-cli' && pkg.name !== 'edgedb-cli') {
       continue
     }
 
