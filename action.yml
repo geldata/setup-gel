@@ -30,6 +30,15 @@ inputs:
       initializing a new local instance.  By default, a new instance will be
       initialized.
     default: 'false'
+  server-password:
+    required: false
+    description: >
+      If set, the password is passed to the `gel instance link` command via
+      stdin using `--password-from-stdin` instead of being embedded in the DSN.
+      Use this to avoid DSN parse errors when the password contains characters
+      that require URL percent-encoding (e.g. `:`, `/`, `@`, `?`, `#`, `%`,
+      `&`).
+    default: ''
   project-dir:
     required: false
     description: >

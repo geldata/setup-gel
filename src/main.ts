@@ -26,6 +26,14 @@ export async function run(): Promise<void> {
     serverDsn = null
   }
 
+  let serverPassword: string | null = core.getInput('server-password')
+  if (serverPassword === '') {
+    serverPassword = null
+  }
+  if (serverPassword !== null) {
+    core.setSecret(serverPassword)
+  }
+
   let instanceName: string | null = core.getInput('instance-name')
   if (instanceName === '') {
     instanceName = null
@@ -41,7 +49,7 @@ export async function run(): Promise<void> {
 
     if (serverDsn) {
       core.addPath(cliPath)
-      await linkInstance(serverDsn, instanceName, projectDir)
+      await linkInstance(serverDsn, serverPassword, instanceName, projectDir)
     } else if (serverVersion) {
       const serverPath = await installServer(serverVersion, cliPath)
       core.addPath(serverPath)
@@ -246,6 +254,7 @@ export function getBaseDist(arch: string, platform: string, libc = ''): string {
 
 async function linkInstance(
   dsn: string,
+  password: string | null,
   instanceName: string | null,
   projectDir: string | null
 ): Promise<void> {
@@ -254,6 +263,7 @@ async function linkInstance(
   const cli = 'gel'
   const options: ExecOptions = {
     silent: true,
+    input: password !== null ? Buffer.from(`${password}\n`) : undefined,
     listeners: {
       stdout: (data: Buffer) => {
         core.debug(data.toString().trim())
@@ -270,9 +280,13 @@ async function linkInstance(
     '--non-interactive',
     '--trust-tls-cert',
     '--dsn',
-    dsn,
-    instanceName
+    dsn
   ]
+  if (password !== null) {
+    instanceLinkCmdLine.push('--password-from-stdin')
+  }
+  instanceLinkCmdLine.push(instanceName)
+
   core.debug(`Running ${cli} ${instanceLinkCmdLine.join(' ')}`)
   await exec.exec(cli, instanceLinkCmdLine, options)
 

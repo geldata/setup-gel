@@ -166,4 +166,83 @@ describe('setup-gel', () => {
     expect(core.addPath).toHaveBeenCalledWith(serverPath)
     expect(core.addPath).toHaveBeenCalledWith(cliPath)
   })
+
+  it('Passes password via stdin when server-password is provided', async () => {
+    inputs['cli-version'] = '>=7.0.0 <=7.0.3'
+    inputs['server-dsn'] = 'gel://admin@localhost:5656'
+    inputs['server-password'] = 'p@ss:/w?rd#with%special&chars'
+    inputs['instance-name'] = 'ci_gel_pw'
+
+    const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'gel-setup-'))
+    let tmp = path.join(tmpdir, 'foo')
+    fs.writeFileSync(tmp, '', { flag: 'w' })
+    tmp = fs.realpathSync(tmp)
+
+    tc.downloadTool.mockImplementation(async () => tmp)
+    tc.find.mockImplementation(() => '')
+
+    const cliPath = path.normalize('/cache/gel/7.0.3')
+    tc.cacheFile.mockImplementation(async () => cliPath)
+    tc.cacheDir.mockImplementation(async () => cliPath)
+
+    let instanceLinkArgs: readonly string[] | undefined
+    let instanceLinkInput: Buffer | undefined
+    exec.exec.mockImplementation(async (_cmd, args, opts) => {
+      if (args && args[0] === 'instance' && args[1] === 'link') {
+        instanceLinkArgs = args
+        instanceLinkInput = opts?.input
+        return 0
+      }
+      return 0
+    })
+
+    await main.run()
+
+    expect(core.setFailed).not.toHaveBeenCalled()
+    expect(core.setSecret).toHaveBeenCalledWith('p@ss:/w?rd#with%special&chars')
+    expect(instanceLinkArgs).toContain('--password-from-stdin')
+    expect(instanceLinkArgs).not.toContain('p@ss:/w?rd#with%special&chars')
+    expect(instanceLinkInput?.toString()).toBe(
+      'p@ss:/w?rd#with%special&chars\n'
+    )
+
+    fs.rmdirSync(tmpdir, { recursive: true })
+  })
+
+  it('Omits --password-from-stdin when server-password is not provided', async () => {
+    inputs['cli-version'] = '>=7.0.0 <=7.0.3'
+    inputs['server-dsn'] = 'gel://admin:plainpw@localhost:5656'
+    inputs['instance-name'] = 'ci_gel_nopw'
+
+    const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'gel-setup-'))
+    let tmp = path.join(tmpdir, 'foo')
+    fs.writeFileSync(tmp, '', { flag: 'w' })
+    tmp = fs.realpathSync(tmp)
+
+    tc.downloadTool.mockImplementation(async () => tmp)
+    tc.find.mockImplementation(() => '')
+
+    const cliPath = path.normalize('/cache/gel/7.0.3')
+    tc.cacheFile.mockImplementation(async () => cliPath)
+    tc.cacheDir.mockImplementation(async () => cliPath)
+
+    let instanceLinkArgs: readonly string[] | undefined
+    let instanceLinkInput: Buffer | undefined
+    exec.exec.mockImplementation(async (_cmd, args, opts) => {
+      if (args && args[0] === 'instance' && args[1] === 'link') {
+        instanceLinkArgs = args
+        instanceLinkInput = opts?.input
+        return 0
+      }
+      return 0
+    })
+
+    await main.run()
+
+    expect(core.setFailed).not.toHaveBeenCalled()
+    expect(instanceLinkArgs).not.toContain('--password-from-stdin')
+    expect(instanceLinkInput).toBeUndefined()
+
+    fs.rmdirSync(tmpdir, { recursive: true })
+  })
 })

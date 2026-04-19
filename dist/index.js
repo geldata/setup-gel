@@ -39712,6 +39712,13 @@ async function run$1() {
     if (serverDsn === '' || serverDsn === 'false' || serverDsn === 'none') {
         serverDsn = null;
     }
+    let serverPassword = coreExports.getInput('server-password');
+    if (serverPassword === '') {
+        serverPassword = null;
+    }
+    if (serverPassword !== null) {
+        coreExports.setSecret(serverPassword);
+    }
     let instanceName = coreExports.getInput('instance-name');
     if (instanceName === '') {
         instanceName = null;
@@ -39724,7 +39731,7 @@ async function run$1() {
         const cliPath = await installCLI$1(cliVersion);
         if (serverDsn) {
             coreExports.addPath(cliPath);
-            await linkInstance(serverDsn, instanceName, projectDir);
+            await linkInstance(serverDsn, serverPassword, instanceName, projectDir);
         }
         else if (serverVersion) {
             const serverPath = await installServer$1(serverVersion, cliPath);
@@ -39882,11 +39889,12 @@ function getBaseDist$1(arch, platform, libc = '') {
     }
     return `${distArch}-${distPlatform}`;
 }
-async function linkInstance(dsn, instanceName, projectDir) {
+async function linkInstance(dsn, password, instanceName, projectDir) {
     instanceName = instanceName || generateInstanceName();
     const cli = 'gel';
     const options = {
         silent: true,
+        input: password !== null ? Buffer.from(`${password}\n`) : undefined,
         listeners: {
             stdout: (data) => {
                 coreExports.debug(data.toString().trim());
@@ -39902,9 +39910,12 @@ async function linkInstance(dsn, instanceName, projectDir) {
         '--non-interactive',
         '--trust-tls-cert',
         '--dsn',
-        dsn,
-        instanceName
+        dsn
     ];
+    if (password !== null) {
+        instanceLinkCmdLine.push('--password-from-stdin');
+    }
+    instanceLinkCmdLine.push(instanceName);
     coreExports.debug(`Running ${cli} ${instanceLinkCmdLine.join(' ')}`);
     await execExports.exec(cli, instanceLinkCmdLine, options);
     if (hasProjectFile(projectDir)) {

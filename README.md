@@ -105,6 +105,29 @@ jobs:
       - run: gel query "SELECT 'Hello from GitHub Actions'"
 ```
 
+Example (link to a remote instance whose password contains characters that would
+require URL percent-encoding inside a DSN, such as `:`, `/`, `@`, `?`, `#`, `%`,
+or `&`). The password is passed to `gel instance link` via stdin using
+`--password-from-stdin`, so the DSN only needs to contain the username, host,
+and port.
+
+```yaml
+on: push
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: CI with Gel action
+    steps:
+      - uses: actions/checkout@v4
+      - uses: geldata/setup-gel@v1
+        with:
+          server-dsn: gel://admin@localhost:5656
+          server-password: ${{ secrets.GEL_SERVER_PASSWORD }}
+          instance-name: ci_gel_instance
+      - run: gel -I ci_gel_instance query "SELECT 'Hello from GitHub Actions'"
+```
+
 Example (creates new instance, but overrides `server-version` from `gel.toml` if
 project initialization is to be used)
 
