@@ -10,10 +10,60 @@ import * as os from 'os'
 import * as path from 'path'
 import * as semver from 'semver'
 
-export const PKG_ROOT = 'https://packages.geldata.com'
-const PKG_IDX = `${PKG_ROOT}/archive/.jsonindexes`
+export const DEFAULT_PKG_ROOT = 'https://packages.geldata.com'
+export let PKG_ROOT = DEFAULT_PKG_ROOT
+export let PKG_IDX = `${PKG_ROOT}/archive/.jsonindexes`
+
+export function setPkgRoot(root: string): void {
+  PKG_ROOT = root.replace(/\/+$/, '')
+  PKG_IDX = `${PKG_ROOT}/archive/.jsonindexes`
+  core.exportVariable('GEL_PKG_ROOT', PKG_ROOT)
+  core.exportVariable('EDGEDB_PKG_ROOT', PKG_ROOT)
+  process.env.GEL_PKG_ROOT = PKG_ROOT
+  process.env.EDGEDB_PKG_ROOT = PKG_ROOT
+  const wslEnvParts = (process.env.WSLENV || '').split(':').filter(Boolean)
+  if (!wslEnvParts.includes('GEL_PKG_ROOT')) {
+    wslEnvParts.push('GEL_PKG_ROOT')
+  }
+  if (!wslEnvParts.includes('EDGEDB_PKG_ROOT')) {
+    wslEnvParts.push('EDGEDB_PKG_ROOT')
+  }
+  if (wslEnvParts.length > 0) {
+    process.env.WSLENV = wslEnvParts.join(':')
+    core.exportVariable('WSLENV', process.env.WSLENV)
+  }
+}
+
+export function getPkgRoot(): string {
+  const custom =
+    core.getInput('package-root') ||
+    core.getInput('pkg-root') ||
+    process.env.GEL_PKG_ROOT ||
+    process.env.EDGEDB_PKG_ROOT
+  return custom ? custom.replace(/\/+$/, '') : DEFAULT_PKG_ROOT
+}
+
+export function getExecEnv(
+  customEnv: Record<string, string | undefined> = {}
+): { [key: string]: string } {
+  const env: { [key: string]: string } = {}
+  for (const [key, value] of Object.entries(process.env)) {
+    if (value !== undefined) {
+      env[key] = value
+    }
+  }
+  for (const [key, value] of Object.entries(customEnv)) {
+    if (value !== undefined) {
+      env[key] = value
+    }
+  }
+  return env
+}
 
 export async function run(): Promise<void> {
+  const pkgRoot = getPkgRoot()
+  setPkgRoot(pkgRoot)
+
   const cliVersion = core.getInput('cli-version')
 
   let serverVersion: string | null = core.getInput('server-version')
@@ -71,6 +121,7 @@ async function installServer(
 ): Promise<string> {
   const options: ExecOptions = {
     silent: true,
+    env: getExecEnv(),
     listeners: {
       stdout: (data: Buffer) => {
         core.debug(data.toString().trim())
@@ -99,6 +150,7 @@ async function installServer(
 
   const infoOptions: ExecOptions = {
     silent: true,
+    env: getExecEnv(),
     listeners: {
       stdout: (data: Buffer) => {
         serverBinPath = data.toString().trim()
@@ -254,6 +306,7 @@ async function linkInstance(
   const cli = 'gel'
   const options: ExecOptions = {
     silent: true,
+    env: getExecEnv(),
     listeners: {
       stdout: (data: Buffer) => {
         core.debug(data.toString().trim())
@@ -306,9 +359,9 @@ async function initProject(
   const cli = 'gel'
   const options: ExecOptions = {
     silent: true,
-    env: {
+    env: getExecEnv({
       XDG_RUNTIME_DIR: runstateDir
-    },
+    }),
     listeners: {
       stdout: (data: Buffer) => {
         core.debug(data.toString().trim())
@@ -347,9 +400,9 @@ async function createNamedInstance(
 
   const options: ExecOptions = {
     silent: true,
-    env: {
+    env: getExecEnv({
       XDG_RUNTIME_DIR: runstateDir
-    },
+    }),
     listeners: {
       stdout: (data: Buffer) => {
         core.debug(data.toString().trim())
@@ -381,9 +434,9 @@ async function startInstance(
   const cli = 'gel'
 
   const options: ExecOptions = {
-    env: {
+    env: getExecEnv({
       XDG_RUNTIME_DIR: runstateDir
-    }
+    })
   }
 
   const cmdLine = ['instance', 'start', '--foreground', instanceName]
@@ -433,7 +486,7 @@ async function backgroundExec(
   const spawnOptions: cp.SpawnOptions = {
     stdio: 'ignore',
     detached: true,
-    env: options.env
+    env: getExecEnv(options.env)
   }
 
   const serverProcess = cp.spawn(command, args, spawnOptions)

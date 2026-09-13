@@ -126,7 +126,7 @@ jobs:
         server-version: [stable, nightly, '5.0']
       fail-fast: false
     steps:
-      - uses: Vampire/setup-wsl@f40fb59d850112c9a292b0218bca8271305b9127 # v5.0
+      - uses: Vampire/setup-wsl@d1da7f2c0322a5ee4f24975344f67fc0f5baf364 # v7.0.0
         with:
           additional-packages: ca-certificates curl
           wsl-shell-command: >
@@ -156,7 +156,7 @@ jobs:
         cli-version: ['5.0']
       fail-fast: false
     steps:
-      - uses: Vampire/setup-wsl@f40fb59d850112c9a292b0218bca8271305b9127 # v5.0
+      - uses: Vampire/setup-wsl@d1da7f2c0322a5ee4f24975344f67fc0f5baf364 # v7.0.0
         with:
           additional-packages: ca-certificates curl
       - uses: actions/checkout@v4
