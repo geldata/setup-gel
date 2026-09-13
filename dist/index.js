@@ -39700,9 +39700,52 @@ function requireSemver () {
 
 var semverExports = requireSemver();
 
-const PKG_ROOT = 'https://packages.geldata.com';
-const PKG_IDX = `${PKG_ROOT}/archive/.jsonindexes`;
+const DEFAULT_PKG_ROOT = 'https://packages.geldata.com';
+let PKG_ROOT = DEFAULT_PKG_ROOT;
+let PKG_IDX = `${PKG_ROOT}/archive/.jsonindexes`;
+function setPkgRoot(root) {
+    PKG_ROOT = root.replace(/\/+$/, '');
+    PKG_IDX = `${PKG_ROOT}/archive/.jsonindexes`;
+    coreExports.exportVariable('GEL_PKG_ROOT', PKG_ROOT);
+    coreExports.exportVariable('EDGEDB_PKG_ROOT', PKG_ROOT);
+    process.env.GEL_PKG_ROOT = PKG_ROOT;
+    process.env.EDGEDB_PKG_ROOT = PKG_ROOT;
+    const wslEnvParts = (process.env.WSLENV || '').split(':').filter(Boolean);
+    if (!wslEnvParts.includes('GEL_PKG_ROOT')) {
+        wslEnvParts.push('GEL_PKG_ROOT');
+    }
+    if (!wslEnvParts.includes('EDGEDB_PKG_ROOT')) {
+        wslEnvParts.push('EDGEDB_PKG_ROOT');
+    }
+    if (wslEnvParts.length > 0) {
+        process.env.WSLENV = wslEnvParts.join(':');
+        coreExports.exportVariable('WSLENV', process.env.WSLENV);
+    }
+}
+function getPkgRoot() {
+    const custom = coreExports.getInput('package-root') ||
+        coreExports.getInput('pkg-root') ||
+        process.env.GEL_PKG_ROOT ||
+        process.env.EDGEDB_PKG_ROOT;
+    return custom ? custom.replace(/\/+$/, '') : DEFAULT_PKG_ROOT;
+}
+function getExecEnv(customEnv = {}) {
+    const env = {};
+    for (const [key, value] of Object.entries(process.env)) {
+        if (value !== undefined) {
+            env[key] = value;
+        }
+    }
+    for (const [key, value] of Object.entries(customEnv)) {
+        if (value !== undefined) {
+            env[key] = value;
+        }
+    }
+    return env;
+}
 async function run$1() {
+    const pkgRoot = getPkgRoot();
+    setPkgRoot(pkgRoot);
     const cliVersion = coreExports.getInput('cli-version');
     let serverVersion = coreExports.getInput('server-version');
     if (serverVersion === '' || serverVersion === 'none') {
@@ -39752,6 +39795,7 @@ async function run$1() {
 async function installServer$1(requestedVersion, cliPath) {
     const options = {
         silent: true,
+        env: getExecEnv(),
         listeners: {
             stdout: (data) => {
                 coreExports.debug(data.toString().trim());
@@ -39776,6 +39820,7 @@ async function installServer$1(requestedVersion, cliPath) {
     let serverBinPath = '';
     const infoOptions = {
         silent: true,
+        env: getExecEnv(),
         listeners: {
             stdout: (data) => {
                 serverBinPath = data.toString().trim();
@@ -39887,6 +39932,7 @@ async function linkInstance(dsn, instanceName, projectDir) {
     const cli = 'gel';
     const options = {
         silent: true,
+        env: getExecEnv(),
         listeners: {
             stdout: (data) => {
                 coreExports.debug(data.toString().trim());
@@ -39928,9 +39974,9 @@ async function initProject(projectDir, instanceName, serverVersion, runstateDir)
     const cli = 'gel';
     const options = {
         silent: true,
-        env: {
+        env: getExecEnv({
             XDG_RUNTIME_DIR: runstateDir
-        },
+        }),
         listeners: {
             stdout: (data) => {
                 coreExports.debug(data.toString().trim());
@@ -39960,9 +40006,9 @@ async function createNamedInstance(instanceName, serverVersion, runstateDir) {
     const cli = 'gel';
     const options = {
         silent: true,
-        env: {
+        env: getExecEnv({
             XDG_RUNTIME_DIR: runstateDir
-        },
+        }),
         listeners: {
             stdout: (data) => {
                 coreExports.debug(data.toString().trim());
@@ -39987,9 +40033,9 @@ async function createNamedInstance(instanceName, serverVersion, runstateDir) {
 async function startInstance(instanceName, runstateDir) {
     const cli = 'gel';
     const options = {
-        env: {
+        env: getExecEnv({
             XDG_RUNTIME_DIR: runstateDir
-        }
+        })
     };
     const cmdLine = ['instance', 'start', '--foreground', instanceName];
     coreExports.debug(`Running ${cli} ${cmdLine.join(' ')} in background`);
@@ -40028,7 +40074,7 @@ async function backgroundExec(command, args, options) {
     const spawnOptions = {
         stdio: 'ignore',
         detached: true,
-        env: options.env
+        env: getExecEnv(options.env)
     };
     const serverProcess = require$$2.spawn(command, args, spawnOptions);
     serverProcess.unref();
@@ -40036,6 +40082,7 @@ async function backgroundExec(command, args, options) {
 
 async function run() {
     try {
+        setPkgRoot(getPkgRoot());
         await installCLI();
         await installServer();
     }
@@ -40046,6 +40093,7 @@ async function run() {
 async function checkOutput(cmd, args) {
     let out = '';
     const options = {
+        env: getExecEnv(),
         listeners: {
             stdout: (data) => {
                 out += data.toString();

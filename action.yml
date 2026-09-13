@@ -35,6 +35,17 @@ inputs:
     description: >
       If set, specifies the directory with gel.toml project manifest.
     default: ''
+  package-root:
+    required: false
+    description: >
+      Package archive root URL to download Gel packages from. Defaults to
+      https://packages.geldata.com.
+    default: ''
+  pkg-root:
+    required: false
+    description: >
+      Alias for package-root.
+    default: ''
 runs:
   using: 'node20'
   main: 'dist/index.js'

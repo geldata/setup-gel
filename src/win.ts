@@ -6,6 +6,7 @@ import * as path from 'path'
 
 export async function run(): Promise<void> {
   try {
+    main.setPkgRoot(main.getPkgRoot())
     await installCLI()
     await installServer()
   } catch (error) {
@@ -17,6 +18,7 @@ async function checkOutput(cmd: string, args?: string[]): Promise<string> {
   let out = ''
 
   const options = {
+    env: main.getExecEnv(),
     listeners: {
       stdout: (data: Buffer) => {
         out += data.toString()

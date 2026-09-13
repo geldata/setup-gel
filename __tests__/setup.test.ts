@@ -103,7 +103,7 @@ describe('setup-gel', () => {
     )
     expect(core.addPath).toHaveBeenCalledWith(cliPath)
 
-    fs.rmdirSync(tmpdir, { recursive: true })
+    fs.rmSync(tmpdir, { recursive: true, force: true })
   })
 
   it('Installs server', async () => {
@@ -153,7 +153,7 @@ describe('setup-gel', () => {
 
     await main.run()
 
-    fs.rmdirSync(tmpdir, { recursive: true })
+    fs.rmSync(tmpdir, { recursive: true, force: true })
 
     expect(tc.downloadTool).toHaveBeenCalled()
     expect(core.info).toHaveBeenCalledWith(
@@ -165,5 +165,128 @@ describe('setup-gel', () => {
     )
     expect(core.addPath).toHaveBeenCalledWith(serverPath)
     expect(core.addPath).toHaveBeenCalledWith(cliPath)
+  })
+
+  it('Merges environment variables when creating named instance', async () => {
+    inputs['cli-version'] = '>=7.0.0 <=7.0.3'
+    inputs['server-version'] = 'stable'
+    inputs['instance-name'] = 'test-instance'
+    process.env.TEST_CUSTOM_ENV = 'preserved_val'
+
+    const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'gel-setup-'))
+    let tmp = path.join(tmpdir, 'foo')
+    fs.writeFileSync(tmp, '', { flag: 'w' })
+    tmp = fs.realpathSync(tmp)
+
+    tc.downloadTool.mockImplementation(async () => tmp)
+    tc.find.mockImplementation(() => '')
+
+    let instanceCreateOpts: execType.ExecOptions | undefined
+    exec.exec.mockImplementation(async (cmd, args, opts) => {
+      if (args && args[0] === 'server' && args[1] === 'install') {
+        return 0
+      } else if (
+        args &&
+        args[0] === 'server' &&
+        args[1] === 'info' &&
+        args[2] === '--bin-path'
+      ) {
+        if (opts?.listeners?.stdout) {
+          opts.listeners.stdout(Buffer.from(tmp))
+        }
+        return 0
+      } else if (args && args[0] === 'instance' && args[1] === 'create') {
+        instanceCreateOpts = opts
+        return 0
+      } else if (args && args[0] === 'instance' && args[1] === 'start') {
+        return 0
+      } else {
+        return 1
+      }
+    })
+
+    const cliPath = path.normalize('/cache/gel/7.0.3')
+    tc.cacheFile.mockImplementation(async () => cliPath)
+    tc.cacheDir.mockImplementation(async () => cliPath)
+
+    try {
+      await main.run()
+    } finally {
+      delete process.env.TEST_CUSTOM_ENV
+      fs.rmSync(tmpdir, { recursive: true, force: true })
+    }
+
+    expect(instanceCreateOpts?.env).toBeDefined()
+    expect(instanceCreateOpts?.env?.TEST_CUSTOM_ENV).toBe('preserved_val')
+    expect(instanceCreateOpts?.env?.XDG_RUNTIME_DIR).toBeDefined()
+  })
+
+  it('Supports explicit package-root input and exports variables', async () => {
+    inputs['cli-version'] = '>=7.0.0 <=7.0.3'
+    inputs['package-root'] = 'https://packages.geldata.com/'
+
+    const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'gel-setup-'))
+    let tmp = path.join(tmpdir, 'foo')
+    fs.writeFileSync(tmp, '', { flag: 'w' })
+    tmp = fs.realpathSync(tmp)
+
+    tc.downloadTool.mockImplementation(async () => tmp)
+    tc.find.mockImplementation(() => '')
+
+    const cliPath = path.normalize('/cache/gel/7.0.3')
+    tc.cacheFile.mockImplementation(async () => cliPath)
+    tc.cacheDir.mockImplementation(async () => cliPath)
+
+    try {
+      await main.run()
+    } finally {
+      fs.rmSync(tmpdir, { recursive: true, force: true })
+    }
+
+    expect(core.exportVariable).toHaveBeenCalledWith(
+      'GEL_PKG_ROOT',
+      'https://packages.geldata.com'
+    )
+    expect(core.exportVariable).toHaveBeenCalledWith(
+      'EDGEDB_PKG_ROOT',
+      'https://packages.geldata.com'
+    )
+    expect(process.env.GEL_PKG_ROOT).toBe('https://packages.geldata.com')
+    expect(process.env.EDGEDB_PKG_ROOT).toBe('https://packages.geldata.com')
+    expect(core.info).toHaveBeenCalledWith(
+      expect.stringContaining('https://packages.geldata.com/archive/')
+    )
+  })
+
+  it('Supports pkg-root input alias', async () => {
+    inputs['cli-version'] = '>=7.0.0 <=7.0.3'
+    inputs['pkg-root'] = 'https://packages.geldata.com/'
+
+    const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'gel-setup-'))
+    let tmp = path.join(tmpdir, 'foo')
+    fs.writeFileSync(tmp, '', { flag: 'w' })
+    tmp = fs.realpathSync(tmp)
+
+    tc.downloadTool.mockImplementation(async () => tmp)
+    tc.find.mockImplementation(() => '')
+
+    const cliPath = path.normalize('/cache/gel/7.0.3')
+    tc.cacheFile.mockImplementation(async () => cliPath)
+    tc.cacheDir.mockImplementation(async () => cliPath)
+
+    try {
+      await main.run()
+    } finally {
+      fs.rmSync(tmpdir, { recursive: true, force: true })
+    }
+
+    expect(core.exportVariable).toHaveBeenCalledWith(
+      'GEL_PKG_ROOT',
+      'https://packages.geldata.com'
+    )
+    expect(core.exportVariable).toHaveBeenCalledWith(
+      'EDGEDB_PKG_ROOT',
+      'https://packages.geldata.com'
+    )
   })
 })
